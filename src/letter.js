@@ -1,10 +1,8 @@
 export class Letter {
   constructor(userId) {
     this.userId = userId;
-
     return this.get().newStructure;
   }
-
   async get() {
     const UserUrl = `https://jsonplaceholder.typicode.com/users/${this.userId}`;
     const PostsUrl = `https://jsonplaceholder.typicode.com/posts?userId=${this.userId}`;
@@ -12,26 +10,31 @@ export class Letter {
     let userObj = [];
     let postsArr = [];
 
-    //Fetch User
-    const userRes = await fetch(UserUrl);
-    userObj = await userRes.text();
-    userObj = userObj === "" ? {} : JSON.parse(userObj);
+    //Fetch User and Posts
+    const [user, posts] = await Promise.all([fetch(UserUrl), fetch(PostsUrl)]);
 
-    //Fetch Posts
-    const postsRes = await fetch(PostsUrl);
-    postsArr = await postsRes.text();
-    postsArr = postsArr === "" ? {} : JSON.parse(postsArr);
-
-    //Generic Handle Errors for this project
-    if (userRes.status !== 200) {
-      return "The number is above 10";
+    //Handle Status
+    switch (user.status) {
+      case 404:
+        return "The number is above 10, try again with a lower number";
+      case 401:
+        return "You dont have permission";
     }
-    if (postsRes.status !== 200) {
-      return "The number is above 10";
+    switch (posts.status) {
+      case 404:
+        return "The number is above 10, try again with a lower number";
+      case 401:
+        return "You dont have permission";
     }
 
-    if (userRes.status === 200 && postsRes.status === 200) {
-      //Create New Structure
+    //Check HTTP status and create new response
+    if (user.status === 200 && posts.status === 200) {
+      userObj = await user.text();
+      postsArr = await posts.text();
+
+      userObj = userObj === "" ? {} : JSON.parse(userObj);
+      postsArr = postsArr === "" ? {} : JSON.parse(postsArr);
+
       const newStructure = Object.assign(userObj, { posts: postsArr });
       return newStructure;
     }
